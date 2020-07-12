@@ -1,0 +1,61 @@
+﻿@page "/storageexports"
+@inject HttpClient _http
+@attribute [Authorize(Roles = nameof(Role.FieldWorker))]
+
+<SpinLoader IsLoading="isLoading">
+    <LoadingTemplate>
+        <div class="row col-12">
+            <Chase Center="true" Color="#1E90FF" Size="70px"></Chase>
+        </div>
+    </LoadingTemplate>
+    <ContentTemplate>
+        <StorageExports Exports="@exports" />
+    </ContentTemplate>
+</SpinLoader>
+
+@code {
+    bool isLoading = true;
+    IList<StorageExport> exports;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await _http.GetJsonAsync<AppUser>(Routes.User.CurrentLoggedUser);
+
+        var queryString = GetQuery(new StorageExportSearchRequest
+        {
+            FieldWorkerId = user.Id
+        });
+        exports = await _http.GetJsonAsync<IList<StorageExport>>(Routes.StorageExport.Root + queryString);
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private string GetQuery(StorageExportSearchRequest request)
+    {
+        List<string> parameters = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(request.ProductCode))
+            parameters.Add($"ProductCode={request.ProductCode}");
+        if (!string.IsNullOrWhiteSpace(request.ProductName))
+            parameters.Add($"ProductName={request.ProductName}");
+        if (!string.IsNullOrWhiteSpace(request.FieldWorkerName))
+            parameters.Add($"FieldWorkerName={request.FieldWorkerName}");
+        if (!string.IsNullOrWhiteSpace(request.FieldWorkerLastName))
+            parameters.Add($"FieldWorkerLastName={request.FieldWorkerLastName}");
+        if (request.ProductId.HasValue)
+            parameters.Add($"ProductId={request.ProductId}");
+        if (request.StorageWorkerId.HasValue)
+            parameters.Add($"StorageWorkerId={request.StorageWorkerId}");
+        if (request.FieldWorkerId.HasValue)
+            parameters.Add($"FieldWorkerId={request.FieldWorkerId}");
+
+        var queryString = string.Empty;
+        if (parameters.Any())
+        {
+            queryString = $"?{string.Join("&", parameters)}";
+        };
+
+        return queryString;
+    }
+}

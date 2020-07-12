@@ -1,0 +1,67 @@
+﻿@layout LoginLayout
+@page "/"
+@inject IAuthService _authService
+@inject NavigationManager _navigationManager
+@inject NotificationService _notificationService
+@inject HttpClient _http
+
+<div class="card-body">
+    <EditForm Model="login" OnValidSubmit="Login">
+        <DataAnnotationsValidator />
+        <div class="form-group">
+            <label for="email">Email address</label>
+            <RadzenTextBox Id="email" Class="form-control" @bind-Value="login.Email" />
+            <ValidationMessage For="@(() => login.Email)" />
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <RadzenTextBox Name="FirstName" Id="password" type="password" Class="form-control" @bind-Value="login.Password" />
+            <ValidationMessage For="@(() => login.Password)" />
+        </div>
+        <RadzenButton type="submit" Text="Login" ButtonStyle="ButtonStyle.Secondary" class="buttonHover" />
+    </EditForm>
+</div>
+
+
+@code {
+    private Login login = new Login();
+
+    private async Task Login()
+    {
+        var result = await _authService.Login(login);
+
+        if (result.Successful)
+        {
+            var user = await _http.GetJsonAsync<AppUser>(Routes.User.CurrentLoggedUser);
+
+            if (user.UserRole == Role.Admin)
+            {
+                _navigationManager.NavigateTo("/users");
+            }
+            else if (user.UserRole == Role.OfficeWorker)
+            {
+                _navigationManager.NavigateTo("/editproducts");
+            }
+            else if (user.UserRole == Role.FieldWorker)
+            {
+                _navigationManager.NavigateTo("/fieldworkerschedules");
+            }
+            else if (user.UserRole == Role.StorageWorker)
+            {
+                _navigationManager.NavigateTo("/products");
+            }
+        }
+        else
+        {
+            var notificationMessage = new NotificationMessage()
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Login Error:",
+                Detail = result.Message,
+                Duration = 4000
+            };
+
+            _notificationService.Notify(notificationMessage);
+        }
+    }
+}
